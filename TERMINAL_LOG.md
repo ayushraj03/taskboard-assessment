@@ -307,7 +307,15 @@ back through the Airtable API and counts rows per `TaskBoard ID`. ("Other rows"
 are 3 rows that existed in the table before the first export: Airtable's
 default empty rows plus one typed by hand.)
 
-**Airtable screenshot / share link:** _ADD_AIRTABLE_LINK_OR_SCREENSHOT_HERE_
+**Airtable screenshot:**
+
+![Airtable Tasks table after the export](docs/airtable-export.png)
+
+Rows 4–10 are the 7 exported Q3 Launch tasks, keyed by `TaskBoard ID`.
+Rows 1–3 were already in the table before any export ran (Airtable's default
+empty rows and one test row typed by hand); the export never creates or
+touches rows without a TaskBoard ID. The screenshot was taken before run #3
+below, which renames "Update pricing page copy" to "… (v2)".
 
 ```console
 PROJECT_ID=cmwapkdw40006pf9594vauphk (Q3 Launch)
