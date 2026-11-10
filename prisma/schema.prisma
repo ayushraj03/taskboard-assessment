@@ -33,6 +33,7 @@ model User {
   assignedTasks  Task[]       @relation("TaskAssignee")
   createdTasks   Task[]       @relation("TaskCreator")
   comments       TaskComment[]
+  exportRuns     ExportRun[]
 
   @@map("users")
 }
@@ -49,6 +50,7 @@ model Project {
   memberships Membership[]
   tasks       Task[]
   comments    TaskComment[]
+  exportRuns  ExportRun[]
 
   @@map("projects")
 }
@@ -109,4 +111,34 @@ model TaskComment {
   @@index([taskId, createdAt])
   @@index([projectId, createdAt])
   @@map("task_comments")
+}
+
+enum ExportStatus {
+  running
+  succeeded
+  completed_with_errors
+  failed
+}
+
+// One row per "export to <target>" click: progress for the UI to poll, and a
+// history of who exported what, when, and which records failed.
+model ExportRun {
+  id            String       @id @default(cuid())
+  projectId     String       @map("project_id")
+  triggeredById String       @map("triggered_by_id")
+  target        String
+  status        ExportStatus @default(running)
+  total         Int          @default(0)
+  exported      Int          @default(0)
+  failed        Int          @default(0)
+  failures      Json         @default("[]")
+  error         String?
+  startedAt     DateTime     @default(now()) @map("started_at")
+  finishedAt    DateTime?    @map("finished_at")
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredBy User    @relation(fields: [triggeredById], references: [id])
+
+  @@index([projectId, startedAt])
+  @@map("export_runs")
 }
