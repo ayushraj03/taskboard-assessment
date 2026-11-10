@@ -4,8 +4,9 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, getToken } from "@/lib/api-client";
+import { apiFetch, getStoredUser, getToken } from "@/lib/api-client";
 import { Header } from "@/components/Header";
+import { ExportPanel } from "@/components/ExportPanel";
 import { StatusColumn } from "@/components/StatusColumn";
 import { TaskDetail } from "@/components/TaskDetail";
 import type { ApiProjectDetail, ApiTask, TaskStatus } from "@/types";
@@ -23,8 +24,11 @@ export default function ProjectPage({ params }: PageProps) {
   const [newColumn, setNewColumn] = useState<TaskStatus>("todo");
   const [error, setError] = useState<string | null>(null);
 
+  // read on the client only: localStorage is unavailable during server render
+  const [currentUserId, setCurrentUserId] = useState<string>();
   useEffect(() => {
     if (!getToken()) router.replace("/login");
+    setCurrentUserId(getStoredUser()?.id);
   }, [router]);
 
   const { data, isLoading, error: queryError } = useQuery({
@@ -46,6 +50,7 @@ export default function ProjectPage({ params }: PageProps) {
   });
 
   const project = data?.project;
+  const myRole = project?.memberships.find((m) => m.user.id === currentUserId)?.role;
   const tasksByStatus: Record<TaskStatus, ApiTask[]> = {
     todo: [],
     in_progress: [],
@@ -91,6 +96,7 @@ export default function ProjectPage({ params }: PageProps) {
                   owner: {project.owner.name} · {project.memberships.length} members
                 </p>
               </div>
+              <ExportPanel projectId={id} canExport={myRole === "admin" || myRole === "member"} />
             </div>
 
             <section className="bg-surface border border-border rounded-lg p-4 mb-6">

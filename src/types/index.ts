@@ -47,6 +47,20 @@ export type ApiComment = {
   author: { id: string; name: string };
 };
 
+export type ApiExportRun = {
+  id: string;
+  target: string;
+  status: "running" | "succeeded" | "completed_with_errors" | "failed";
+  total: number;
+  exported: number;
+  failed: number;
+  failures: { key: string; label: string; error: string }[];
+  error: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+  triggeredBy: { id: string; name: string };
+};
+
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: "To do",
   in_progress: "In progress",
