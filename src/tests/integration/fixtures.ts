@@ -7,7 +7,8 @@ const PASSWORD_HASH = "$2a$10$vyZV8v8sGvEnz/x1/oO9U.e8jv0IbsAM7lJyldMxc7Z09TYXXO
 
 export async function resetDb() {
   await prisma.$executeRawUnsafe(
-    `TRUNCATE TABLE "tasks", "memberships", "projects", "users" RESTART IDENTITY CASCADE`,
+    // TRUNCATE bypasses the task_comments append-only row trigger, which is what we want for test resets
+    `TRUNCATE TABLE "task_comments", "tasks", "memberships", "projects", "users" RESTART IDENTITY CASCADE`,
   );
 }
 

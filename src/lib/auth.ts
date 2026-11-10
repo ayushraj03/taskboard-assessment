@@ -39,6 +39,10 @@ export function notFound(message = "not found") {
   return NextResponse.json({ error: message }, { status: 404 });
 }
 
+export function conflict(message = "conflict") {
+  return NextResponse.json({ error: message }, { status: 409 });
+}
+
 export type ProjectRole = "admin" | "member" | "viewer";
 
 export async function getProjectMembership(userId: string, projectId: string) {
@@ -46,6 +50,22 @@ export async function getProjectMembership(userId: string, projectId: string) {
     where: { userId_projectId: { userId, projectId } },
     select: { role: true },
   });
+}
+
+/**
+ * Resolves a task and the caller's role in the task's project.
+ * `task` is null when the task does not exist; `role` is null when the
+ * caller is not a member of the project.
+ */
+export async function getTaskAccess(userId: string, taskId: string) {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, projectId: true },
+  });
+  if (!task) return { task: null, role: null };
+
+  const membership = await getProjectMembership(userId, task.projectId);
+  return { task, role: membership?.role ?? null };
 }
 
 export function canEditProject(role: ProjectRole | null | undefined): boolean {
