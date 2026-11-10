@@ -6,9 +6,11 @@ import {
   forbidden,
   notFound,
   badRequest,
+  conflict,
   getProjectMembership,
   canEditProject,
 } from "@/lib/auth";
+import { isForeignKeyViolation } from "@/lib/prisma";
 import { updateProjectSchema } from "@/schemas/project";
 
 type Params = { params: Promise<{ id: string }> };
@@ -78,6 +80,16 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return forbidden("only project admins can delete the project");
   }
 
-  await prisma.project.delete({ where: { id } });
+  // deleting the project would cascade to its tasks, whose comments are an
+  // append-only audit trail (ON DELETE RESTRICT)
+  const COMMENTS_CONFLICT = "this project has task comments, which are part of the audit trail, so it cannot be deleted";
+  if (await prisma.taskComment.count({ where: { projectId: id } })) return conflict(COMMENTS_CONFLICT);
+
+  try {
+    await prisma.project.delete({ where: { id } });
+  } catch (e) {
+    if (isForeignKeyViolation(e)) return conflict(COMMENTS_CONFLICT);
+    throw e;
+  }
   return NextResponse.json({ ok: true });
 }

@@ -6,9 +6,11 @@ import {
   forbidden,
   notFound,
   badRequest,
+  conflict,
   getProjectMembership,
   canEditTasks,
 } from "@/lib/auth";
+import { isForeignKeyViolation } from "@/lib/prisma";
 import { updateTaskSchema } from "@/schemas/task";
 
 type Params = { params: Promise<{ id: string }> };
@@ -52,6 +54,16 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return forbidden("viewers cannot delete tasks");
   }
 
-  await prisma.task.delete({ where: { id } });
+  // comments are an append-only audit trail; the FK is ON DELETE RESTRICT, so
+  // check up front for a clear error and treat a racing FK violation the same way
+  const COMMENTS_CONFLICT = "this task has comments, which are part of the audit trail, so it cannot be deleted";
+  if (await prisma.taskComment.count({ where: { taskId: id } })) return conflict(COMMENTS_CONFLICT);
+
+  try {
+    await prisma.task.delete({ where: { id } });
+  } catch (e) {
+    if (isForeignKeyViolation(e)) return conflict(COMMENTS_CONFLICT);
+    throw e;
+  }
   return NextResponse.json({ ok: true });
 }
