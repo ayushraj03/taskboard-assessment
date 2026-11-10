@@ -32,6 +32,7 @@ model User {
   ownedProjects  Project[]    @relation("ProjectOwner")
   assignedTasks  Task[]       @relation("TaskAssignee")
   createdTasks   Task[]       @relation("TaskCreator")
+  comments       TaskComment[]
 
   @@map("users")
 }
@@ -47,6 +48,7 @@ model Project {
   owner       User         @relation("ProjectOwner", fields: [ownerId], references: [id])
   memberships Membership[]
   tasks       Task[]
+  comments    TaskComment[]
 
   @@map("projects")
 }
@@ -81,7 +83,30 @@ model Task {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignee  User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
   createdBy User    @relation("TaskCreator", fields: [createdById], references: [id])
+  comments  TaskComment[]
 
+  @@unique([id, projectId])
   @@index([projectId, status])
   @@map("tasks")
+}
+
+// Append-only audit trail: no updatedAt, and a DB trigger (see migration)
+// rejects UPDATE/DELETE. Restrict on every FK so deleting a task, project or
+// user can never silently take its comments with it.
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String   @map("task_id")
+  projectId String   @map("project_id")
+  authorId  String   @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // composite FK guarantees the denormalized projectId always matches the task's project
+  task    Task    @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Restrict)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+  @@index([projectId, createdAt])
+  @@map("task_comments")
 }
