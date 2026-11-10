@@ -31,7 +31,9 @@ export function toExportRow(task: ExportableTask, projectName: string, exportedA
       Status: STATUS_LABELS[task.status],
       Assignee: task.assignee?.name ?? "",
       Project: projectName,
-      Position: task.position,
+      // sent as a string: with typecast, Airtable accepts it in both text and
+      // number columns, whereas a raw number is rejected by text columns
+      Position: String(task.position),
       "Created At": task.createdAt.toISOString(),
       "Updated At": task.updatedAt.toISOString(),
       "Last Exported At": exportedAt.toISOString(),

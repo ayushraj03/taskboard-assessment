@@ -92,7 +92,7 @@ describe("toExportRow", () => {
       Status: "In progress",
       Assignee: "Kavya Reddy",
       Project: "Q3 Launch",
-      Position: 3,
+      Position: "3",
       "Created At": "2026-01-01T00:00:00.000Z",
       "Updated At": "2026-01-02T00:00:00.000Z",
       "Last Exported At": "2026-02-01T00:00:00.000Z",
