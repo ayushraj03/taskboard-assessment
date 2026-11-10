@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, getStoredUser } from "@/lib/api-client";
 import type { ApiTask, ApiProjectMember, TaskStatus } from "@/types";
 import { STATUS_LABELS, STATUS_ORDER } from "@/types";
+import { CommentThread } from "./CommentThread";
 
 type Props = {
   task: ApiTask;
@@ -20,6 +21,11 @@ export function TaskDetail({ task, projectId, members, onClose }: Props) {
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [assigneeId, setAssigneeId] = useState<string>(task.assigneeId ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  // UI hint only — the API enforces the same rule
+  const [currentUserId] = useState(() => getStoredUser()?.id);
+  const myRole = members.find((m) => m.user.id === currentUserId)?.role;
+  const canPostComments = myRole === "admin" || myRole === "member";
 
   const updateTask = useMutation({
     mutationFn: (input: Partial<ApiTask>) =>
@@ -60,7 +66,7 @@ export function TaskDetail({ task, projectId, members, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl bg-surface border border-border rounded-lg p-6"
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-surface border border-border rounded-lg p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -153,6 +159,8 @@ export function TaskDetail({ task, projectId, members, onClose }: Props) {
             </button>
           </div>
         </div>
+
+        <CommentThread taskId={task.id} canPost={canPostComments} />
       </div>
     </div>
   );
