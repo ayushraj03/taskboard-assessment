@@ -18,5 +18,13 @@ export const updateTaskSchema = z.object({
   position: z.number().int().min(0).optional(),
 });
 
+// blank / whitespace-only search terms mean "no filter"
+export const taskSearchSchema = z
+  .string()
+  .trim()
+  .max(200)
+  .optional()
+  .transform((q) => q || undefined);
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

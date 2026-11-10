@@ -8,7 +8,7 @@ import {
   getProjectMembership,
   canEditTasks,
 } from "@/lib/auth";
-import { createTaskSchema } from "@/schemas/task";
+import { createTaskSchema, taskSearchSchema } from "@/schemas/task";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,23 +20,22 @@ export async function GET(req: NextRequest, { params }: Params) {
   const membership = await getProjectMembership(user.id, projectId);
   if (!membership) return forbidden("you are not a member of this project");
 
-  const q = req.nextUrl.searchParams.get("q");
+  const parsedQuery = taskSearchSchema.safeParse(req.nextUrl.searchParams.get("q") ?? undefined);
+  if (!parsedQuery.success) return badRequest("invalid search query", parsedQuery.error.flatten());
+  // prisma passes `contains` as a bound parameter but does not escape LIKE wildcards
+  const q = parsedQuery.data?.replace(/[\\%_]/g, "\\$&");
 
-  if (q) {
-    // search across title and description
-    const sql = `
-      SELECT id, project_id, title, description, status, assignee_id, created_by_id, position, created_at, updated_at
-      FROM tasks
-      WHERE project_id = '${projectId}'
-        AND (title ILIKE '%${q}%' OR description ILIKE '%${q}%')
-      ORDER BY position ASC
-    `;
-    const tasks = await prisma.$queryRawUnsafe(sql);
-    return NextResponse.json({ tasks });
-  }
-
+  // search goes through the same parameterized query as the plain listing — never raw SQL
   const tasks = await prisma.task.findMany({
-    where: { projectId },
+    where: {
+      projectId,
+      ...(q && {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+        ],
+      }),
+    },
     include: {
       assignee: { select: { id: true, name: true, email: true } },
     },
